@@ -10,11 +10,9 @@ sim.load = function()
     canvases.x = nc32(64 * 4, 64)
     canvases.h = nc32(64 * 128 / 4, 64)
     canvases.y = nc32(64 * 4, 64)
-    canvases.pre = nc32(64 * 12, 64)
 
     shaders.h = love.graphics.newShader('shaders/h.glsl')
     shaders.y = love.graphics.newShader('shaders/y.glsl')
-    shaders.pre = love.graphics.newShader('shaders/pre.glsl')
 
     sim.quad = love.graphics.newQuad(0, 0, 64, 64, 64 * 4, 64)
 
@@ -23,12 +21,14 @@ sim.load = function()
 end
 
 sim.initializeX = function()
-    love.graphics.setColor(1, 1, 1)
     love.graphics.setCanvas(canvases.x)
     love.graphics.clear()
-    --love.graphics.draw(gfx.mock)
-    for i=1, 4 do
-        love.graphics.rectangle('fill', 32 + (i - 1) * 64, 32, 1, 1)
+    -- rgb 0, alpha & all other channels 1
+    love.graphics.setColor(0, 0, 0)
+    love.graphics.rectangle('fill', 32, 32, 1, 1)
+    love.graphics.setColor(1, 1, 1)
+    for i=1, 3 do
+        love.graphics.rectangle('fill', 32 + i * 64, 32, 1, 1)
     end
     love.graphics.setCanvas(canvases.h)
     love.graphics.clear()
@@ -57,10 +57,8 @@ sim.loadWeights = function()
         local b = weights.d2_bias
         dense2:setPixel(128, j - 1, b[j0 + 1], b[j0 + 2], b[j0 + 3], b[j0 + 4])
     end
-    dense1 = love.graphics.newImage(dense1)
-    dense2 = love.graphics.newImage(dense2)
-    shaders.h:send('dense1', dense1)
-    shaders.y:send('dense2', dense2)
+    shaders.h:send('dense1', love.graphics.newImage(dense1))
+    shaders.y:send('dense2', love.graphics.newImage(dense2))
 end
 
 sim.step = function()
@@ -93,18 +91,6 @@ sim.step = function()
     love.graphics.setBlendMode('alpha', 'alphamultiply')
 
     stepNum = stepNum + 1
-    if stepNum == 1 then
-        local img = canvases.y:newImageData()
-        local s = '\n'
-        for j=1, 3 do
-            for i=1, 3 do
-                local r, g, b, a = img:getPixel(30 + i + 64, 30 + j)
-                s = s .. r .. ', '
-            end
-            s = s .. '\n'
-        end
-        print(s)
-    end
 end
 
 sim.draw = function()

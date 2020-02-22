@@ -103,6 +103,7 @@ class AliveMask(Layer):
         mask = pool > 0.1
         outputs = K.cast(mask, 'float32')
         #outputs = K.repeat_elements(outputs, 16, axis=3) # warning: node 'alive_mask_1/concat' has self cycle fanin 'alive_mask_1/concat'
+        outputs = K.concatenate([outputs for _ in range(16)], axis=3) # todo: test if necessary
         return outputs
 
 class Clip(Layer):

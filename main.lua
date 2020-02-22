@@ -61,6 +61,5 @@ end
 
 function love.draw()
     love.graphics.clear(0.8, 0.8, 0.8)
-    --love.graphics.clear(0,0,0)
     sim.draw()
 end
