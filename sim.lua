@@ -6,7 +6,7 @@ local function nc32(w, h)
     return love.graphics.newCanvas(w, h, { format='rgba32f' })
 end
 
-sim.load = function()
+function sim.load()
     canvases.x = nc32(64 * 4, 64)
     canvases.h = nc32(64 * 128 / 4, 64)
     canvases.y = nc32(64 * 4, 64)
@@ -20,7 +20,7 @@ sim.load = function()
     sim.loadWeights()
 end
 
-sim.initializeX = function()
+function sim.initializeX()
     love.graphics.setCanvas(canvases.x)
     love.graphics.clear()
     -- rgb 0, alpha & all other channels 1
@@ -35,8 +35,9 @@ sim.initializeX = function()
     love.graphics.setCanvas()
 end
 
-sim.loadWeights = function()
-    local weights = dofile('data/weights.lua')
+function sim.loadWeights()
+    --local weights = dofile('data/weights.lua')
+    local weights = dofile('data/4000.lua')
     local dense1 = love.image.newImageData(16 * 3 + 1, 128 / 4, 'rgba32f')
     local dense2 = love.image.newImageData(128 + 1, 16 / 4, 'rgba32f')
     for j=1, 128 / 4 do
@@ -61,7 +62,7 @@ sim.loadWeights = function()
     shaders.y:send('dense2', love.graphics.newImage(dense2))
 end
 
-sim.step = function()
+function sim.step()
     love.graphics.setColor(1, 1, 1)
     love.graphics.setBlendMode('replace', 'premultiplied')
 
@@ -79,6 +80,7 @@ sim.step = function()
     love.graphics.setShader(shaders.y)
     shaders.y:send('xin', canvases.x)
     shaders.y:send('h', canvases.h)
+    shaders.y:send('randOffset', { love.math.random() * 1000, love.math.random() * 1000 })
     love.graphics.rectangle('fill', 0, 0, canvases.y:getDimensions())
 
     -- set x to y
@@ -93,9 +95,13 @@ sim.step = function()
     stepNum = stepNum + 1
 end
 
-sim.draw = function()
+function sim.draw()
+    love.graphics.setColor(0.1, 0.1, 0.1)
+    love.graphics.rectangle('fill', ssx / 2 - 32 * 8 - 4, ssy / 2 - 32 * 8 - 4, 64 * 8 + 8, 64 * 8 + 8)
+    love.graphics.setColor(0.9, 0.9, 0.9)
+    love.graphics.rectangle('fill', ssx / 2 - 32 * 8, ssy / 2 - 32 * 8, 64 * 8, 64 * 8)
     love.graphics.setColor(1, 1, 1)
-    love.graphics.draw(canvases.x, sim.quad, ssx/2, ssy/2, 0, 8, 8, 32, 32)
+    love.graphics.draw(canvases.x, sim.quad, ssx / 2, ssy / 2, 0, 8, 8, 32, 32)
     love.graphics.draw(canvases.h, 0, 0, 0, 0.5, 0.5)
     love.graphics.draw(canvases.x, 0, 32)
 end

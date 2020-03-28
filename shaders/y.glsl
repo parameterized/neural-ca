@@ -2,6 +2,12 @@
 uniform Image xin;
 uniform Image h;
 uniform Image dense2;
+uniform vec2 randOffset;
+
+float rand(vec2 p)
+{
+	return fract(sin(dot(p, vec2(12.9898, 4.1414))) * 43758.5453);
+}
 
 vec4 effect(vec4 color, Image tex, vec2 texture_coords, vec2 screen_coords)
 {
@@ -184,7 +190,8 @@ float y3 = h0.x * d2_0.w + h0.y * d2_1.w + h0.z * d2_2.w + h0.w * d2_3.w + h1.x 
 if (Texel(xin, mod(uv + d.xx, cs) / xss).a <= 0.1 && Texel(xin, mod(uv + d.xy, cs) / xss).a <= 0.1 && Texel(xin, mod(uv + d.xz, cs) / xss).a <= 0.1 && Texel(xin, mod(uv + d.yx, cs) / xss).a <= 0.1 && Texel(xin, mod(uv + d.yy, cs) / xss).a <= 0.1 && Texel(xin, mod(uv + d.yz, cs) / xss).a <= 0.1 && Texel(xin, mod(uv + d.zx, cs) / xss).a <= 0.1 && Texel(xin, mod(uv + d.zy, cs) / xss).a <= 0.1 && Texel(xin, mod(uv + d.zz, cs) / xss).a <= 0.1) { return vec4(0.0); }
 
     vec4 res = Texel(xin, screen_coords / xss);
-    res = clamp(res + vec4(y0, y1, y2, y3), 0, 1);
+    float update_mask = rand(mod(uv, cs) + randOffset) < 0.5 ? 1.0 : 0.0;
+    res += vec4(y0, y1, y2, y3) * update_mask;
 
     return res;
 }
