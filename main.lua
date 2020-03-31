@@ -12,11 +12,7 @@ love.math.setRandomSeed(os.time())
 love.graphics.setDefaultFilter('nearest', 'nearest')
 love.graphics.setLineStyle('rough')
 
-gfx = {
-    mock = love.graphics.newImage('gfx/mock.png'),
-    think = love.graphics.newImage('gfx/think.png')
-}
-
+gfx = {}
 canvases = {}
 shaders = {}
 

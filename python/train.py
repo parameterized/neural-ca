@@ -9,11 +9,12 @@ from io_helpers import *
 
 
 class Trainer():
-    def __init__(self, ca, target, batch_size=9, pool_size=512, target_padding=16):
+    def __init__(self, ca, target, batch_size=9, pool_size=512, target_padding=16, damage_n=3):
         self.ca = ca
         self.target = target
         self.batch_size = batch_size
         self.pool_size = pool_size
+        self.damage_n = damage_n
 
         p = target_padding
         self.target = tf.pad(self.target, [(p, p), (p, p), (0, 0)])
@@ -28,6 +29,16 @@ class Trainer():
         lr_sched = tf.keras.optimizers.schedules.PiecewiseConstantDecay(
             [2000], [lr, lr * 0.1])
         self.optimizer = tf.keras.optimizers.Adam(lr_sched)
+    
+    @tf.function
+    def make_circle_masks(self, n, h, w):
+        x = tf.linspace(-1.0, 1.0, w)[None, None, :]
+        y = tf.linspace(-1.0, 1.0, h)[None, :, None]
+        center = tf.random.uniform([2, n, 1, 1], -0.5, 0.5)
+        r = tf.random.uniform([n, 1, 1], 0.1, 0.4)
+        x, y = (x - center[0]) / r, (y - center[1]) / r
+        mask = tf.cast(x * x + y * y < 1.0, tf.float32)
+        return mask
     
     def loss_fn(self, x):
         return tf.reduce_mean(tf.square(x[..., :4] - self.target), [-2, -3, -1])
@@ -45,10 +56,18 @@ class Trainer():
         return x, loss
 
     def step(self):
+        # sample pool
         batch_idx = np.random.choice(self.pool_size, self.batch_size, replace=False)
         batch_x = self.pool[batch_idx]
-        max_loss_idx = self.loss_fn(batch_x).numpy().argmax()
-        batch_x[max_loss_idx] = self.seed
+        # sort by initial loss (high to low)
+        loss_rank = self.loss_fn(batch_x).numpy().argsort()[::-1]
+        batch_x = batch_x[loss_rank]
+        # reset example with max loss
+        batch_x[0] = self.seed
+        # damage last n examples (lowest loss)
+        if self.damage_n > 0:
+            damage_mask = self.make_circle_masks(self.damage_n, self.h, self.w).numpy()[..., np.newaxis]
+            batch_x[-self.damage_n:] *= 1.0 - damage_mask
 
         x2, loss = self.train_step(batch_x)
 

@@ -42,8 +42,7 @@ function sim.initializeX()
 end
 
 function sim.loadWeights()
-    --local weights = dofile('data/weights.lua')
-    local weights = dofile('data/4000.lua')
+    local weights = dofile('data/persist_4k.lua')
     local dense1 = love.image.newImageData(16 * 3 + 1, 128 / 4, 'rgba32f')
     local dense2 = love.image.newImageData(128 + 1, 16 / 4, 'rgba32f')
     for j=1, 128 / 4 do

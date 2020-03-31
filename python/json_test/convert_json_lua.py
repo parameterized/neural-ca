@@ -3,7 +3,7 @@ import numpy as np
 import json
 import base64
 
-file_name = '4000'
+file_name = 'regen_8k'
 
 with open(file_name + '.json') as f:
     model_json = json.load(f)
