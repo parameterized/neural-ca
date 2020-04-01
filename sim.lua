@@ -15,12 +15,15 @@ function sim.load()
     shaders.h = love.graphics.newShader('shaders/h.glsl')
     shaders.y = love.graphics.newShader('shaders/y.glsl')
     shaders.edit = love.graphics.newShader('shaders/edit.glsl')
+    shaders.move = love.graphics.newShader('shaders/move.glsl')
 
     sim.xQuad = love.graphics.newQuad(0, 0, 64, 64, 64 * 4, 64)
 
     sim.viewport = { w=64 * 8, h=64 * 8 }
     sim.viewport.x = math.floor(ssx / 2 - sim.viewport.w / 2)
     sim.viewport.y = math.floor(ssy / 2 - sim.viewport.h / 2)
+    
+    sim.movePos = { x=0, y=0 }
 
     sim.initializeX()
     sim.loadWeights()
@@ -42,7 +45,7 @@ function sim.initializeX()
 end
 
 function sim.loadWeights()
-    local weights = dofile('data/persist_4k.lua')
+    local weights = love.filesystem.load('data/persist_4k.lua')()
     local dense1 = love.image.newImageData(16 * 3 + 1, 128 / 4, 'rgba32f')
     local dense2 = love.image.newImageData(128 + 1, 16 / 4, 'rgba32f')
     for j=1, 128 / 4 do
@@ -67,56 +70,20 @@ function sim.loadWeights()
     shaders.y:send('dense2', love.graphics.newImage(dense2))
 end
 
-function sim.mouseToCell(x, y)
-    local v = sim.viewport
-    local cx = math.floor((x - v.x) / v.w * 64)
-    local cy = math.floor((y - v.y) / v.h * 64)
-    return cx, cy
-end
+function sim.edit(editType, cellX, cellY)
+    local cellX, cellY = sim.mouseToCell(love.mouse.getPosition())
+    local _canvas = love.graphics.getCanvas()
+    local _shader = love.graphics.getShader()
+    love.graphics.setBlendMode('replace', 'premultiplied')
 
-function sim.mousepressed(x, y, btn)
-    if btn == 1 and love.keyboard.isScancodeDown('lshift') then
-        local cx, cy = sim.mouseToCell(x, y)
-        local _canvas = love.graphics.getCanvas()
-        local _shader = love.graphics.getShader()
-        love.graphics.setBlendMode('replace', 'premultiplied')
-
-        -- get edit
-        love.graphics.setCanvas(canvases.edit)
-        love.graphics.setShader()
-        love.graphics.clear()
+    -- get edit
+    love.graphics.setCanvas(canvases.edit)
+    love.graphics.setShader()
+    love.graphics.clear()
+    if editType == 'seed' then
         love.graphics.setColor(1, 1, 1)
-        love.graphics.rectangle('fill', cx, cy, 1, 1)
-
-        -- get y
-        love.graphics.setCanvas(canvases.y)
-        love.graphics.setShader(shaders.edit)
-        shaders.edit:send('xin', canvases.x)
-        shaders.edit:send('edit', canvases.edit)
-        love.graphics.rectangle('fill', 0, 0, canvases.x:getDimensions())
-
-        -- set x to y
-        love.graphics.setShader()
-        love.graphics.setCanvas(canvases.x)
-        love.graphics.draw(canvases.y)
-
-        love.graphics.setBlendMode('alpha', 'alphamultiply')
-        love.graphics.setShader(_shader)
-        love.graphics.setCanvas(_canvas)
-    end
-end
-
-function sim.mouseUpdate(dt)
-    if love.mouse.isDown(1) and not love.keyboard.isScancodeDown('lshift') then
-        local cellX, cellY = sim.mouseToCell(love.mouse.getPosition())
-        local _canvas = love.graphics.getCanvas()
-        local _shader = love.graphics.getShader()
-        love.graphics.setBlendMode('replace', 'premultiplied')
-
-        -- get edit
-        love.graphics.setCanvas(canvases.edit)
-        love.graphics.setShader()
-        love.graphics.clear()
+        love.graphics.rectangle('fill', cellX, cellY, 1, 1)
+    elseif editType == 'damage' then
         love.graphics.setColor(0, 0, 0)
         -- loop edit circle
         for i=0, 1 do
@@ -126,14 +93,48 @@ function sim.mouseUpdate(dt)
                 love.graphics.circle('fill', circleX, circleY, 10)
             end
         end
+    end
+
+    -- get y
+    love.graphics.setCanvas(canvases.y)
+    love.graphics.setShader(shaders.edit)
+    shaders.edit:send('xin', canvases.x)
+    shaders.edit:send('edit', canvases.edit)
+    love.graphics.rectangle('fill', 0, 0, canvases.x:getDimensions())
+
+    -- set x to y
+    love.graphics.setShader()
+    love.graphics.setCanvas(canvases.x)
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.draw(canvases.y)
+
+    love.graphics.setBlendMode('alpha', 'alphamultiply')
+    love.graphics.setShader(_shader)
+    love.graphics.setCanvas(_canvas)
+end
+
+function sim.move(dx, dy)
+    -- get movement in cell space - move when >= 1 cell
+    sim.movePos.x = sim.movePos.x + dx / 8
+    sim.movePos.y = sim.movePos.y + dy / 8
+    if math.abs(sim.movePos.x) >= 1 or math.abs(sim.movePos.y) >= 1 then
+        local mpxDir = sim.movePos.x >= 0 and 1 or -1
+        local mpyDir = sim.movePos.y >= 0 and 1 or -1
+        local cell_dx = math.floor(math.abs(sim.movePos.x)) * mpxDir
+        local cell_dy = math.floor(math.abs(sim.movePos.y)) * mpyDir
+        sim.movePos.x = (math.abs(sim.movePos.x) % 1) * mpxDir
+        sim.movePos.y = (math.abs(sim.movePos.y) % 1) * mpyDir
+
+        local _canvas = love.graphics.getCanvas()
+        local _shader = love.graphics.getShader()
+        love.graphics.setBlendMode('replace', 'premultiplied')
 
         -- get y
         love.graphics.setCanvas(canvases.y)
-        love.graphics.setShader(shaders.edit)
-        shaders.edit:send('xin', canvases.x)
-        shaders.edit:send('edit', canvases.edit)
-        love.graphics.rectangle('fill', 0, 0, canvases.x:getDimensions())
-
+        love.graphics.setShader(shaders.move)
+        shaders.move:send('delta', { cell_dx, cell_dy })
+        love.graphics.draw(canvases.x)
+        
         -- set x to y
         love.graphics.setShader()
         love.graphics.setCanvas(canvases.x)
@@ -143,6 +144,31 @@ function sim.mouseUpdate(dt)
         love.graphics.setBlendMode('alpha', 'alphamultiply')
         love.graphics.setShader(_shader)
         love.graphics.setCanvas(_canvas)
+    end
+end
+
+function sim.mouseToCell(x, y)
+    local v = sim.viewport
+    local cx = math.floor((x - v.x) / v.w * 64)
+    local cy = math.floor((y - v.y) / v.h * 64)
+    return cx, cy
+end
+
+function sim.mousepressed(x, y, btn)
+    if btn == 1 and love.keyboard.isScancodeDown('lshift') then
+        sim.edit('seed', sim.mouseToCell(x, y))
+    end
+end
+
+function sim.mousemoved(x, y, dx, dy)
+    if love.mouse.isDown(2) then
+        sim.move(dx, dy)
+    end
+end
+
+function sim.mouseUpdate(dt)
+    if love.mouse.isDown(1) and not love.keyboard.isScancodeDown('lshift') then
+        sim.edit('damage', sim.mouseToCell(love.mouse.getPosition()))
     end
 end
 

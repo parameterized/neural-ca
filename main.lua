@@ -35,6 +35,10 @@ function love.mousepressed(x, y, btn, isTouch, presses)
     sim.mousepressed(x, y, btn)
 end
 
+function love.mousemoved(x, y, dx, dy, isTouch)
+    sim.mousemoved(x, y, dx, dy)
+end
+
 function love.keypressed(k, scancode, isRepeat)
     if k == 'escape' then
         love.event.quit()
