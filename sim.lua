@@ -1,6 +1,8 @@
 
--- doesn't work correctly yet
-local sim = {}
+local sim = {
+    maxStepsPerSec = 120, -- negate for unlimited
+    maxFPS = 60 -- (but not for this)
+}
 
 local function nc32(w, h)
     return love.graphics.newCanvas(w, h, { format='rgba32f' })
@@ -27,6 +29,11 @@ function sim.load()
 
     sim.initializeX()
     sim.loadWeights()
+
+    sim.stepCount = 0
+    sim.stepCountTime = love.timer.getTime()
+    sim.stepTimer = 0
+    sim.stepsPerSec = 0
 end
 
 function sim.initializeX()
@@ -111,6 +118,8 @@ function sim.edit(editType, cellX, cellY)
     love.graphics.setBlendMode('alpha', 'alphamultiply')
     love.graphics.setShader(_shader)
     love.graphics.setCanvas(_canvas)
+
+    sim.stepCount = sim.stepCount + 1
 end
 
 function sim.move(dx, dy)
@@ -144,6 +153,8 @@ function sim.move(dx, dy)
         love.graphics.setBlendMode('alpha', 'alphamultiply')
         love.graphics.setShader(_shader)
         love.graphics.setCanvas(_canvas)
+
+        sim.stepCount = sim.stepCount + 1
     end
 end
 
@@ -172,6 +183,24 @@ function sim.mouseUpdate(dt)
     end
 end
 
+function sim.update(dt)
+    local startTime = love.timer.getTime()
+    sim.stepTimer = sim.stepTimer - dt
+    -- getTime doesn't seem to work when called with sub-ms delay
+    -- so limiting by frameSteps is necessary
+    local frameSteps = 0
+    while love.timer.getTime() - startTime < 1 / sim.maxFPS
+    and sim.stepTimer < 0
+    and frameSteps < sim.stepsPerSec * 2 / sim.maxFPS + 1 do
+        sim.step()
+        sim.stepTimer = sim.stepTimer + 1 / sim.maxStepsPerSec
+        frameSteps = frameSteps + 1
+    end
+    local remainingTimeBudget = 1 / sim.maxFPS
+		- (love.timer.getTime() - startTime)
+	love.timer.sleep(math.max(remainingTimeBudget, 0))
+end
+
 function sim.step()
     love.graphics.setColor(1, 1, 1)
     love.graphics.setBlendMode('replace', 'premultiplied')
@@ -198,7 +227,16 @@ function sim.step()
     love.graphics.setCanvas()
     love.graphics.setBlendMode('alpha', 'alphamultiply')
 
-    stepNum = stepNum + 1
+    sim.stepCount = sim.stepCount + 1
+    
+    if love.timer.getTime() - sim.stepCountTime > 1 then
+        sim.stepsPerSec = sim.stepCount
+        love.window.setTitle('Neural CA ('
+            .. love.timer.getFPS() .. ' FPS, '
+            .. sim.stepsPerSec .. ' steps/sec)')
+        sim.stepCount = 0
+        sim.stepCountTime = love.timer.getTime()
+    end
 end
 
 function sim.draw()

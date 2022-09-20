@@ -23,12 +23,7 @@ fonts = {
 
 function love.load()
     sim.load()
-
-    limitFPS = false
     doSim = true
-    simFPS = 30
-    simTimer = 1 / simFPS
-    stepNum = 0
 end
 
 function love.mousepressed(x, y, btn, isTouch, presses)
@@ -44,25 +39,21 @@ function love.keypressed(k, scancode, isRepeat)
         love.event.quit()
     elseif k == 'r' then
         sim.initializeX()
-        stepNum = 0
     elseif k == 'space' then
         doSim = not doSim
     elseif k == 'right' then
         sim.step()
+    elseif k == 'l' then
+        sim.maxStepsPerSec = -sim.maxStepsPerSec
+        sim.stepTimer = 0
     end
 end
 
 function love.update(dt)
     sim.mouseUpdate(dt)
     if doSim then
-        simTimer = simTimer - dt
-        if not limitFPS or simTimer < 0 then
-            simTimer = simTimer + 1 / simFPS
-            sim.step()
-        end
+        sim.update(dt)
     end
-
-    love.window.setTitle('Neural CA (' .. love.timer.getFPS() .. ' FPS)')
 end
 
 function love.draw()

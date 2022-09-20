@@ -19,4 +19,5 @@ If you're on Windows, the easiest way is to drag the folder containing main.lua 
 - Space to pause
 - Right arrow to step simulation forward
 - R to reset
+- L to toggle steps per second limit
 - Escape to close
